@@ -1298,7 +1298,10 @@ function initWelcome() {
   $('#hTitle').textContent = m.emoji + ' ' + m.title;
   $('#hSub').textContent = m.subtitle;
   $('#reqList').innerHTML = DATA.task.requirements.map(r => '<li>' + esc(r) + '</li>').join('');
-  $('#inName').value = store.get('sq_name', ''); $('#inClass').value = store.get('sq_class', '');
+  /* names are never remembered: the fields stay empty and only the faint placeholder example is shown (shared devices, privacy) */
+  $('#inName').value = ''; $('#inClass').value = '';
+  ['inName', 'inClass'].forEach(id => { const el = $('#' + id); el.setAttribute('autocomplete', 'off'); el.setAttribute('autocorrect', 'off'); el.setAttribute('name', 'sq_' + id + '_' + Math.random().toString(36).slice(2, 7)); });
+
   { const gm = String((DATA.meta && DATA.meta.grade) || '').match(/\d+/); if (gm) { $('#inClass').placeholder = 'e.g. ' + gm[0] + 'A1'; if (($('#inClass').value || '').trim().charAt(0) !== gm[0]) $('#inClass').value = ''; } }   /* a class remembered from another grade (e.g. 6A1 in a Grade 7 game) is not pre-filled */
   const sup = $('#support');
   if (SR) { sup.className = 'support ok'; sup.textContent = '✅ Speech recognition is available – you can be scored automatically.'; }
@@ -1320,7 +1323,8 @@ function initWelcome() {
   
   $('#btnStart').onclick = () => {
     const n = $('#inName').value.trim(); if (!n) { toast('Please type your name first 😊'); $('#inName').focus(); return; }
-    S.name = n; S.cls = $('#inClass').value.trim(); store.set('sq_name', n); store.set('sq_class', S.cls);
+    S.name = n; S.cls = $('#inClass').value.trim(); store.set('sq_name', ''); store.set('sq_class', '');
+
     
     openStage();
   };
@@ -1392,8 +1396,8 @@ function paintLive() {
 }
 
 /* ---------- recording ---------- */
-/* Talk length in seconds: 60 by default. Only on the TEACHER's machine (?station=1) can the link change it (&time=90, 30–180 s) – on students' own devices it is always 60. */
-const MAXS = new URLSearchParams(location.search).has('station') ? Math.min(180, Math.max(30, parseInt(new URLSearchParams(location.search).get('time'), 10) || 60)) : 60;
+/* Talk length in seconds: 60 on students' own devices. On the TEACHER's machine (?station=1) it comes from the on-screen panel (saved on that device) or the link (&time=60/90/120). */
+let MAXS = (function () { const q = new URLSearchParams(location.search); if (!q.has('station')) return 60; let v = parseInt(q.get('time'), 10); if (!v) { try { v = parseInt(localStorage.getItem('sq_station_time'), 10); } catch (e) { } } return [60, 90, 120].reduce((best, t) => Math.abs(t - (v || 60)) < Math.abs(best - (v || 60)) ? t : best, 60); })();
 const CIRC = 2 * Math.PI * 54;
 function setRing(p) { $('#ringFg').style.strokeDashoffset = String(CIRC * (1 - Math.min(1, p))); }
 function initRing() {

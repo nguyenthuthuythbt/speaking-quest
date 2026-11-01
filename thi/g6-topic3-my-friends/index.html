@@ -1298,7 +1298,10 @@ function initWelcome() {
   $('#hTitle').textContent = m.emoji + ' ' + m.title;
   $('#hSub').textContent = m.subtitle;
   $('#reqList').innerHTML = DATA.task.requirements.map(r => '<li>' + esc(r) + '</li>').join('');
-  $('#inName').value = store.get('sq_name', ''); $('#inClass').value = store.get('sq_class', '');
+  /* names are never remembered: the fields stay empty and only the faint placeholder example is shown (shared devices, privacy) */
+  $('#inName').value = ''; $('#inClass').value = '';
+  ['inName', 'inClass'].forEach(id => { const el = $('#' + id); el.setAttribute('autocomplete', 'off'); el.setAttribute('autocorrect', 'off'); el.setAttribute('name', 'sq_' + id + '_' + Math.random().toString(36).slice(2, 7)); });
+
   { const gm = String((DATA.meta && DATA.meta.grade) || '').match(/\d+/); if (gm) { $('#inClass').placeholder = 'e.g. ' + gm[0] + 'A1'; if (($('#inClass').value || '').trim().charAt(0) !== gm[0]) $('#inClass').value = ''; } }   /* a class remembered from another grade (e.g. 6A1 in a Grade 7 game) is not pre-filled */
   const sup = $('#support');
   if (SR) { sup.className = 'support ok'; sup.textContent = '✅ Speech recognition is available – you can be scored automatically.'; }
@@ -1320,7 +1323,8 @@ function initWelcome() {
    if (EXAM) examSetup(); 
   $('#btnStart').onclick = () => {
     const n = $('#inName').value.trim(); if (!n) { toast('Please type your name first 😊'); $('#inName').focus(); return; }
-    S.name = n; S.cls = $('#inClass').value.trim(); store.set('sq_name', n); store.set('sq_class', S.cls);
+    S.name = n; S.cls = $('#inClass').value.trim(); store.set('sq_name', ''); store.set('sq_class', '');
+
      if (EXAM && examDone()) { toast('Em đã nộp bài thi này rồi. Mỗi em chỉ thi một lượt.', 4500); return; } 
     openStage();
   };
@@ -1392,8 +1396,8 @@ function paintLive() {
 }
 
 /* ---------- recording ---------- */
-/* Talk length in seconds: 60 by default. Only on the TEACHER's machine (?station=1) can the link change it (&time=90, 30–180 s) – on students' own devices it is always 60. */
-const MAXS = new URLSearchParams(location.search).has('station') ? Math.min(180, Math.max(30, parseInt(new URLSearchParams(location.search).get('time'), 10) || 60)) : 60;
+/* Talk length in seconds: 60 on students' own devices. On the TEACHER's machine (?station=1) it comes from the on-screen panel (saved on that device) or the link (&time=60/90/120). */
+let MAXS = (function () { const q = new URLSearchParams(location.search); if (!q.has('station')) return 60; let v = parseInt(q.get('time'), 10); if (!v) { try { v = parseInt(localStorage.getItem('sq_station_time'), 10); } catch (e) { } } return [60, 90, 120].reduce((best, t) => Math.abs(t - (v || 60)) < Math.abs(best - (v || 60)) ? t : best, 60); })();
 const CIRC = 2 * Math.PI * 54;
 function setRing(p) { $('#ringFg').style.strokeDashoffset = String(CIRC * (1 - Math.min(1, p))); }
 function initRing() {
@@ -1603,9 +1607,34 @@ function examSetup() {
   if (STATION) {
     const cl = new URLSearchParams(location.search).get('class'); if (cl) { $('#inClass').value = cl; }
     ['btnHome', 'btnCfg'].forEach(id => { const el = $('#' + id); if (el) el.style.display = 'none'; });
+    stationPanel();
     rosterSetup();
     eb.innerHTML = '<b>🎙️ BÀI THI NÓI (máy của cô)</b> – Lần lượt từng bạn lên: gõ tên, bấm Bắt đầu thi, bấm 🎤 và nói. Bài nói được <b>ghi âm</b> để làm minh chứng.';
   }
+}
+/* Teacher's machine: on-screen settings for talk time and level (saved on this device, no link editing needed) */
+function stationApply() {
+  const tm = $('#stTime'), lv = $('#stLevel');
+  MAXS = [60, 90, 120].includes(parseInt(tm.value, 10)) ? parseInt(tm.value, 10) : 60;
+  setLevel(lv.value);
+  $$('.lvbtn').forEach(b => { b.style.display = b.dataset.l === S.level ? '' : 'none'; });
+  const t = $('#tTarget'); if (t) t.textContent = '/ ' + fmt(MAXS) + ' · target ' + fmt(Math.round(MAXS * 0.75)) + '–' + fmt(MAXS);
+  store.set('sq_station_time', String(MAXS)); store.set('sq_station_level', S.level);
+}
+function stationPanel() {
+  const q = new URLSearchParams(location.search);
+  const wantLv = (q.get('level') || store.get('sq_station_level', '') || DATA.meta.examLevel || 'A2').toUpperCase();
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:12px 0;padding:12px 14px;border-radius:16px;border:2px dashed #fbbf24;background:rgba(251,191,36,.08)';
+  const times = [[60, '1:00 (1 phút)'], [90, '1:30 (1 phút 30)'], [120, '2:00 (2 phút)']];
+  box.innerHTML = '<div style="font-weight:800;color:#fbbf24;margin-bottom:8px">⚙️ Cài đặt của cô (chỉ trên máy này)</div>' +
+    '<label style="margin-right:14px">⏱ Thời gian nói: <select id="stTime" style="padding:6px 10px;border-radius:10px;font-size:1rem">' + times.map(t => '<option value="' + t[0] + '"' + (t[0] === MAXS ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select></label>' +
+    '<label>🎚 Trình độ: <select id="stLevel" style="padding:6px 10px;border-radius:10px;font-size:1rem">' + ['A1', 'A2', 'B1', 'B2'].map(l => '<option' + (l === wantLv ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>';
+  const anchor = $('#inClass').closest('div').parentElement;
+  anchor.parentElement.insertBefore(box, anchor.nextSibling);
+  if (!times.some(t => t[0] === MAXS)) { const o = document.createElement('option'); o.value = MAXS; o.textContent = fmt(MAXS); o.selected = true; $('#stTime').appendChild(o); }
+  $('#stTime').onchange = stationApply; $('#stLevel').onchange = stationApply;
+  stationApply();
 }
 function stationNext() {
   if (S.name) S.rosterDone[S.name.toLowerCase()] = 1;
