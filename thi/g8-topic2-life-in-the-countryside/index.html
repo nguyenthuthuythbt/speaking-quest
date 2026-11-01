@@ -324,7 +324,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
             <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="54"/><circle class="ring-ok" id="ringOk" cx="60" cy="60" r="54"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/></svg>
             <button class="mic" id="btnMic" aria-label="Start or stop recording">🎤</button>
           </div>
-          <div class="time"><span id="tNow">0:00</span> <small>/ 1:00 · target 45–60 s</small></div>
+          <div class="time"><span id="tNow">0:00</span> <small id="tTarget">/ 1:00 · target 45–60 s</small></div>
           <div class="status" id="status">Tap the microphone and start talking!</div>
           <canvas class="wave" id="wave" width="600" height="54"></canvas>
           <div class="live" id="live"></div>
@@ -1289,6 +1289,7 @@ function speak(text, rate, onend) {
 function initWelcome() {
   const m = DATA.meta;
   $('#brandSub').textContent = (m.grade ? m.grade + ' · ' : '') + (m.unit || '');
+  if (MAXS !== 60) { $('#tTarget').textContent = '/ ' + fmt(MAXS) + ' · target ' + fmt(Math.round(MAXS * 0.75)) + '–' + fmt(MAXS); }
   if (m.author) { const a = esc(m.author); $('#brandSub').insertAdjacentHTML('beforeend', ' · by ' + a); const cr = document.createElement('div'); cr.className = 'credit'; cr.id = 'credit'; cr.innerHTML = '© ' + new Date().getFullYear() + ' <b>' + a + '</b> · Speaking Quest'; document.body.appendChild(cr); document.title += ' · ' + m.author; }
   const art = $('#heroArt');
   if (m.image) { art.innerHTML = '<img alt="' + esc(m.title) + '" src="' + m.image + '">'; }
@@ -1391,7 +1392,8 @@ function paintLive() {
 }
 
 /* ---------- recording ---------- */
-const MAXS = 60;
+/* Talk length in seconds: 60 by default. Only on the TEACHER's machine (?station=1) can the link change it (&time=90, 30–180 s) – on students' own devices it is always 60. */
+const MAXS = new URLSearchParams(location.search).has('station') ? Math.min(180, Math.max(30, parseInt(new URLSearchParams(location.search).get('time'), 10) || 60)) : 60;
 const CIRC = 2 * Math.PI * 54;
 function setRing(p) { $('#ringFg').style.strokeDashoffset = String(CIRC * (1 - Math.min(1, p))); }
 function initRing() {
@@ -1588,7 +1590,8 @@ const CRIT_COL = { gv: '#38bdf8', dm: '#c084fc', pr: '#fb923c', ic: '#34d399' };
 const STATION = new URLSearchParams(location.search).has('station');
 /* ----- exam rules (exam build only): level fixed by the link (?level=A2), one attempt per student on this device, no model talk, score hidden ----- */
 function examSetup() {
-  const lv = (new URLSearchParams(location.search).get('level') || DATA.meta.examLevel || 'A2').toUpperCase();
+  /* level: on the teacher's machine the link decides (&level=B1); on students' devices it is the single exam level set at build time (--exam-level, default A2) */
+  const lv = ((STATION && new URLSearchParams(location.search).get('level')) || DATA.meta.examLevel || 'A2').toUpperCase();
   setLevel(['A1', 'A2', 'B1', 'B2'].includes(lv) ? lv : 'A2');
   $$('.lvbtn').forEach(b => { b.onclick = null; b.disabled = true; if (b.dataset.l !== S.level) b.style.display = 'none'; });
   const lab = document.querySelector('.lvbtn') && document.querySelector('.lvbtn').parentElement.previousElementSibling; if (lab) lab.textContent = 'Trình độ bài thi · Exam level';
@@ -1610,7 +1613,7 @@ function stationNext() {
   resetRec(); S.name = ''; S.lastBlob = null; S.lastAudio = null; S.lastReport = null;
   $('#inName').value = ''; if (S.rosterNames) rosterRender(S.rosterNames); show('s-welcome'); setTimeout(() => $('#inName').focus(), 200);
 }
-/* 1-minute clock (exam): counts down on screen, turns red in the last 10 s; the recording stops by itself at 1:00 (MAXS) */
+/* countdown clock (exam): turns red in the last 10 s; the recording stops by itself at MAXS (1:00 by default, ?time=90 for 1:30) */
 function examClock(el) {
   let c = $('#examClock');
   if (!c) { c = document.createElement('div'); c.id = 'examClock'; c.style.cssText = 'font-family:var(--head);font-weight:700;font-size:1.5rem;margin-top:6px;text-align:center'; $('#tNow').closest('.time').after(c); }
@@ -1625,7 +1628,7 @@ function examNoSpeech(rep) {
   const left = MAX_ATTEMPTS - S.attempt;
   $('#resultBody').innerHTML = `<div class="card" style="text-align:center;padding:34px 22px"><div style="font-size:3.2rem">🎙️</div>
     <h2 style="margin:8px 0">Chưa nghe thấy em nói (lượt ${S.attempt}/${MAX_ATTEMPTS})</h2>
-    <p style="font-weight:700">Máy chưa nhận được lời nói của em. Em còn <b>${left} lượt thi lại</b>. Hãy nói to, rõ và nói trong 1 phút.</p>
+    <p style="font-weight:700">Máy chưa nhận được lời nói của em. Em còn <b>${left} lượt thi lại</b>. Hãy nói to, rõ và nói trọn thời gian quy định.</p>
     <div class="actions" style="justify-content:center;margin-top:12px"><button class="btn btn-coral btn-lg" id="exRetry">🔁 Thi lại (lượt ${S.attempt + 1})</button></div></div>`;
   $('#exRetry').onclick = () => { S.lastBlob = null; openStage(); };
   show('s-result');

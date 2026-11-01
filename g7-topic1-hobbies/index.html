@@ -324,7 +324,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
             <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="54"/><circle class="ring-ok" id="ringOk" cx="60" cy="60" r="54"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/></svg>
             <button class="mic" id="btnMic" aria-label="Start or stop recording">🎤</button>
           </div>
-          <div class="time"><span id="tNow">0:00</span> <small>/ 1:00 · target 45–60 s</small></div>
+          <div class="time"><span id="tNow">0:00</span> <small id="tTarget">/ 1:00 · target 45–60 s</small></div>
           <div class="status" id="status">Tap the microphone and start talking!</div>
           <canvas class="wave" id="wave" width="600" height="54"></canvas>
           <div class="live" id="live"></div>
@@ -1289,6 +1289,7 @@ function speak(text, rate, onend) {
 function initWelcome() {
   const m = DATA.meta;
   $('#brandSub').textContent = (m.grade ? m.grade + ' · ' : '') + (m.unit || '');
+  if (MAXS !== 60) { $('#tTarget').textContent = '/ ' + fmt(MAXS) + ' · target ' + fmt(Math.round(MAXS * 0.75)) + '–' + fmt(MAXS); }
   if (m.author) { const a = esc(m.author); $('#brandSub').insertAdjacentHTML('beforeend', ' · by ' + a); const cr = document.createElement('div'); cr.className = 'credit'; cr.id = 'credit'; cr.innerHTML = '© ' + new Date().getFullYear() + ' <b>' + a + '</b> · Speaking Quest'; document.body.appendChild(cr); document.title += ' · ' + m.author; }
   const art = $('#heroArt');
   if (m.image) { art.innerHTML = '<img alt="' + esc(m.title) + '" src="' + m.image + '">'; }
@@ -1391,7 +1392,8 @@ function paintLive() {
 }
 
 /* ---------- recording ---------- */
-const MAXS = 60;
+/* Talk length in seconds: 60 by default. Only on the TEACHER's machine (?station=1) can the link change it (&time=90, 30–180 s) – on students' own devices it is always 60. */
+const MAXS = new URLSearchParams(location.search).has('station') ? Math.min(180, Math.max(30, parseInt(new URLSearchParams(location.search).get('time'), 10) || 60)) : 60;
 const CIRC = 2 * Math.PI * 54;
 function setRing(p) { $('#ringFg').style.strokeDashoffset = String(CIRC * (1 - Math.min(1, p))); }
 function initRing() {
