@@ -24,6 +24,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .top{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 20px;background:rgba(15,23,42,.88);backdrop-filter:blur(12px);border-bottom:4px solid var(--gold)}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:1.25rem;color:var(--gold)}
 .brand .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#fbbf24,#f97316);display:grid;place-items:center;color:#020617;font-size:1.2rem;box-shadow:0 6px 14px rgba(249,115,22,.4)}
+.credit{margin:34px auto 22px;text-align:center;font-family:var(--head);font-weight:600;font-size:.95rem;color:var(--dim);letter-spacing:.3px}.credit b{color:var(--gold)}
 .brand small{display:block;font-family:var(--body);font-weight:700;color:var(--dim);font-size:.75rem;letter-spacing:.4px}
 .sp{flex:1}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-weight:800;font-size:.9rem;white-space:nowrap}
@@ -189,7 +190,7 @@ h3{font-size:1.2rem}
 .ladder .pin{position:absolute;top:-30px;transform:translateX(-50%);font-weight:900;font-size:.82rem;background:#fbbf24;color:#1a1a1a;padding:3px 10px;border-radius:99px;white-space:nowrap}
 .ladder .pin:after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:#fbbf24;border-bottom:0}
 .cefr .rows{display:grid;gap:10px;margin-top:14px}
-.cefr .row{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(15,23,42,.45)}
+.cefr .row{display:grid;grid-template-columns:170px 1fr;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(15,23,42,.45)}
 .cefr .row .lv{font-family:var(--head);font-size:1.3rem;color:#fbbf24}
 .cefr .row .lv small{display:block;font-family:var(--body);font-size:.8rem;color:var(--dim);font-weight:800}
 .cefr .row p{margin:2px 0;font-size:.95rem}.cefr .row .can{font-weight:700}.cefr .row .nx{color:#7dd3fc}
@@ -286,6 +287,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
             <div class="lvdesc" id="lvDesc"></div>
           </div>
           <div class="support" id="support"></div>
+          <div class="support warn" id="examBanner" style="display:none"></div>
           <div class="support warn" id="fileWarn" style="display:none;align-items:flex-start;flex-direction:column;gap:4px"></div>
           <button class="btn btn-coral btn-lg" id="btnStart">🚀 Start the mission</button>
         </div>
@@ -381,7 +383,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     B2: { name: 'Upper-Inter.', minWords: 100, targetWords: 125, minSec: 50, wpm: [90, 155],  bank: 9, linkers: 5, uniq: 58, sub: 4, pen: 0.24, tol: 4, pLo: 0.60 }
   };
 
-  var WEIGHTS = { gv: 2, dm: 1, ic: 1, pr: 1 };
+  var WEIGHTS = { gv: 2, dm: 1, ic: 1, pr: 2 };
   var LINKERS = ['and', 'but', 'because', 'so', 'also', 'first', 'firstly', 'second', 'secondly', 'third', 'then', 'next',
     'after that', 'finally', 'lastly', 'for example', 'for instance', 'however', 'although', 'when', 'which', 'who', 'if',
     'too', 'as well', 'in addition', 'besides', 'moreover', "that's why", 'while', 'another', 'one more'];
@@ -427,34 +429,43 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
   };
 
 
-  /* ---------- CEFR can-do descriptors (A1 → B2) ----------
-     Adapted from the Cambridge English speaking assessment scales (Grammar & Vocabulary, Discourse Management,
-     Pronunciation, Interactive Communication) and the CEFR Companion Volume – paraphrased for lower-secondary learners. */
+  /* ---------- CEFR descriptors ----------
+     RANGE / ACCURACY / FLUENCY / COHERENCE: Council of Europe, CEFR "Table 3 (CEFR 3.3) – Qualitative aspects of spoken language use"
+     (descriptors shortened, Vietnamese = translation). PHONOLOGY: CEFR phonological control scale (paraphrased).
+     INTERACTION (turn-taking, asking/answering) cannot be judged in a one-minute monologue → reported as "not assessed". */
   var CEFR_ORDER = ['A1', 'A2', 'B1', 'B2'];
+  var ASPECTS = ['range', 'accuracy', 'fluency', 'coherence', 'phonology'];
+  var ASPECT_NAMES = { range: ['Range', 'Vốn từ & cấu trúc'], accuracy: ['Accuracy', 'Độ chính xác (ngữ pháp)'], fluency: ['Fluency', 'Trôi chảy'], coherence: ['Coherence', 'Mạch lạc, liên kết ý'], phonology: ['Phonology', 'Phát âm'], interaction: ['Interaction', 'Tương tác'] };
   var CEFR = {
-    gv: {
-      A1: ['Uses single words and a few memorised phrases about very familiar things.', 'Dùng từ đơn lẻ và vài cụm câu học thuộc về những điều rất quen thuộc.'],
-      A2: ['Uses basic vocabulary and simple sentences about familiar topics. Mistakes are common, but the meaning is clear.', 'Dùng từ vựng cơ bản và câu đơn về chủ đề quen thuộc. Còn nhiều lỗi nhưng nghĩa vẫn rõ.'],
-      B1: ['Uses everyday vocabulary and some longer sentences (because, when, which). Most simple structures are correct.', 'Dùng từ vựng hằng ngày và vài câu dài (because, when, which). Phần lớn cấu trúc đơn giản đúng.'],
-      B2: ['Uses a good range of vocabulary and a variety of structures with only occasional mistakes.', 'Dùng vốn từ khá rộng và nhiều cấu trúc khác nhau, chỉ thỉnh thoảng mắc lỗi.']
+    range: {
+      A1: ['Has a very basic repertoire of words and simple phrases related to personal details and particular concrete situations.', 'Có vốn từ và cụm từ đơn giản rất cơ bản về thông tin cá nhân và tình huống cụ thể.'],
+      A2: ['Uses basic sentence patterns with memorised phrases, groups of a few words and formulae to communicate limited information in simple everyday situations.', 'Dùng mẫu câu cơ bản với cụm từ học thuộc, nhóm vài từ để truyền đạt thông tin hạn chế trong tình huống quen thuộc.'],
+      B1: ['Has enough language to get by, with sufficient vocabulary to express him/herself with some hesitation and circumlocution on topics such as family, hobbies and interests.', 'Có đủ ngôn ngữ để diễn đạt về gia đình, sở thích… dù còn ngập ngừng và phải nói vòng.'],
+      B2: ['Has a sufficient range of language to give clear descriptions and express viewpoints on most general topics, without much conspicuous searching for words, using some complex sentence forms.', 'Có vốn ngôn ngữ đủ để mô tả rõ ràng, nêu quan điểm về hầu hết chủ đề chung, ít phải tìm từ, dùng được một số câu phức.']
     },
-    dm: {
-      A1: ['Gives very short answers. Ideas are separate; “and” may link them.', 'Trả lời rất ngắn. Các ý rời nhau, có thể nối bằng “and”.'],
-      A2: ['Says a few connected sentences with “and”, “but”, “because” and covers most of the points.', 'Nói vài câu nối với nhau bằng and, but, because và trả lời được phần lớn các ý.'],
-      B1: ['Gives a simple but organised talk (Introduction → Main points → Conclusion) with a range of linking words.', 'Nói bài đơn giản nhưng có bố cục (Mở – Thân – Kết), dùng nhiều từ nối khác nhau.'],
-      B2: ['Develops every point with reasons or examples in a clear, well-organised talk with varied linkers.', 'Phát triển từng ý bằng lí do, ví dụ trong bài nói mạch lạc, từ nối đa dạng.']
+    accuracy: {
+      A1: ['Shows only limited control of a few simple grammatical structures and sentence patterns in a memorised repertoire.', 'Chỉ kiểm soát được một vài cấu trúc, mẫu câu đơn giản đã học thuộc.'],
+      A2: ['Uses some simple structures correctly, but still systematically makes basic mistakes.', 'Dùng đúng một số cấu trúc đơn giản nhưng vẫn mắc lỗi cơ bản một cách có hệ thống.'],
+      B1: ['Uses reasonably accurately a repertoire of frequently used “routines” and patterns associated with more predictable situations.', 'Dùng khá chính xác các mẫu câu thường gặp trong tình huống dễ đoán.'],
+      B2: ['Shows a relatively high degree of grammatical control. Does not make errors which cause misunderstanding, and can correct most of his/her mistakes.', 'Kiểm soát ngữ pháp khá cao, không mắc lỗi gây hiểu lầm và tự sửa được phần lớn lỗi.']
     },
-    pr: {
-      A1: ['A patient listener can understand most words with effort.', 'Người nghe kiên nhẫn hiểu được phần lớn từ nhưng phải cố gắng.'],
-      A2: ['Generally understandable, although some sounds and word stress make the listener work.', 'Nhìn chung nghe hiểu được, một số âm và trọng âm làm người nghe hơi khó theo dõi.'],
-      B1: ['Clearly intelligible. Some mispronunciations do not stop understanding.', 'Nghe rõ, dễ hiểu. Vài từ phát âm sai nhưng không cản trở việc hiểu.'],
-      B2: ['Easy to understand throughout, with mostly natural stress and intonation.', 'Dễ hiểu suốt bài, trọng âm và ngữ điệu khá tự nhiên.']
+    fluency: {
+      A1: ['Can manage very short, isolated, mainly pre-packaged utterances, with much pausing to search for expressions and to repair communication.', 'Nói được những câu rất ngắn, rời rạc, phần lớn học thuộc; dừng nhiều để tìm từ.'],
+      A2: ['Can make him/herself understood in very short utterances, even though pauses, false starts and reformulation are very evident.', 'Nói được những câu rất ngắn để người nghe hiểu, dù ngắt nghỉ, nói lại, bắt đầu sai còn rất rõ.'],
+      B1: ['Can keep going comprehensibly, even though pausing for grammatical and lexical planning and repair is very evident, especially in longer stretches of free production.', 'Nói tiếp được và vẫn hiểu được, dù việc dừng lại để nghĩ ngữ pháp, từ vựng và tự sửa còn rất rõ, nhất là khi nói dài.'],
+      B2: ['Can produce stretches of language with a fairly even tempo; although hesitant as he/she searches for patterns and expressions, there are few noticeably long pauses.', 'Nói được những đoạn dài với nhịp khá đều; có lúc ngập ngừng nhưng ít khi dừng lâu.']
     },
-    ic: {
-      A1: ['Speaks in short, hesitant bursts with many pauses.', 'Nói từng đoạn ngắn, ngập ngừng, ngắt nghỉ nhiều.'],
-      A2: ['Keeps going, but pauses to plan what to say are very noticeable.', 'Nói tiếp được nhưng thấy rõ những lúc dừng lại để nghĩ.'],
-      B1: ['Keeps going comfortably. Pauses to plan or correct are noticeable but do not break the flow.', 'Nói liên tục khá thoải mái. Có lúc dừng để nghĩ hoặc sửa nhưng không đứt mạch.'],
-      B2: ['Speaks at length at a natural pace with few noticeable pauses.', 'Nói dài ở tốc độ tự nhiên, ít khi phải dừng lại.']
+    coherence: {
+      A1: ['Can link words or groups of words with very basic linear connectors like “and” or “then”.', 'Nối từ hoặc cụm từ bằng các từ nối rất cơ bản như “and”, “then”.'],
+      A2: ['Can link groups of words with simple connectors like “and”, “but” and “because”.', 'Nối các nhóm từ bằng từ nối đơn giản như “and”, “but”, “because”.'],
+      B1: ['Can link a series of shorter, discrete simple elements into a connected, linear sequence of points.', 'Nối một loạt ý ngắn, rời thành chuỗi các ý liên kết với nhau theo thứ tự.'],
+      B2: ['Can use a limited number of cohesive devices to link his/her utterances into clear, coherent discourse, though there may be some “jumpiness” in a long contribution.', 'Dùng một số phương tiện liên kết để nối lời nói thành bài mạch lạc, dù bài dài đôi lúc còn “nhảy ý”.']
+    },
+    phonology: {
+      A1: ['Pronunciation of a very limited repertoire of learnt words and phrases can be understood with some effort.', 'Phát âm một số ít từ, cụm đã học có thể hiểu được nhưng người nghe phải cố gắng.'],
+      A2: ['Pronunciation is generally clear enough to be understood, but listeners will need to ask for repetition from time to time.', 'Phát âm nhìn chung đủ rõ để hiểu, nhưng thỉnh thoảng người nghe phải nhờ nhắc lại.'],
+      B1: ['Pronunciation is clearly intelligible even if a foreign accent is sometimes evident and occasional mispronunciations occur.', 'Phát âm rõ, dễ hiểu dù đôi khi còn giọng nước ngoài và thỉnh thoảng phát âm sai.'],
+      B2: ['Has acquired a clear, natural pronunciation and intonation.', 'Phát âm và ngữ điệu rõ ràng, khá tự nhiên.']
     }
   };
   var CEFR_BELOW = ['Not yet at A1: only a few words or very short phrases.', 'Chưa đạt A1: mới nói được vài từ hoặc cụm rất ngắn.'];
@@ -468,17 +479,20 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     return { level: CEFR_ORDER[i], idx: i + 1, rising: f >= 0.5 && i < 3, top: i === 3 && pos >= 4.75 };
   }
   function cefrOf(rep) {
-    var lv = rep.level, out = { pos: null, level: null, rising: false, enough: rep.words >= 20, crit: {} };
-    var bands = { gv: rep.criteria.gv.score, dm: rep.criteria.dm.score, pr: rep.criteria.pr.score, ic: rep.criteria.ic.score };
-    ['gv', 'dm', 'pr', 'ic'].forEach(function (k) {
+    var lv = rep.level, out = { pos: null, level: null, rising: false, enough: rep.words >= 20, crit: {}, aspects: ASPECTS, names: ASPECT_NAMES, source: 'Council of Europe – CEFR Table 3 (Qualitative aspects of spoken language use)' };
+    var bands = { range: rep.rangeBand, accuracy: rep.accBand, fluency: rep.criteria.ic.score, coherence: rep.criteria.dm.score, phonology: rep.criteria.pr.score };
+    var sum = 0, n = 0;
+    ASPECTS.forEach(function (k) {
       if (bands[k] == null) { out.crit[k] = null; return; }
       var pos = ladderPos(lv, bands[k]), pl = posLabel(pos), cur = pl.idx >= 1 ? CEFR_ORDER[pl.idx - 1] : null, nxt = pl.idx >= 1 && pl.idx < 4 ? CEFR_ORDER[pl.idx] : (pl.idx === 0 ? 'A1' : null);
-      out.crit[k] = { pos: pos, level: pl.level, rising: pl.rising, can: cur ? CEFR[k][cur] : CEFR_BELOW, next: nxt ? { level: nxt, text: CEFR[k][nxt] } : null };
+      out.crit[k] = { band: bands[k], pos: pos, level: pl.level, rising: pl.rising, can: cur ? CEFR[k][cur] : CEFR_BELOW, next: nxt ? { level: nxt, text: CEFR[k][nxt] } : null };
+      sum += pos; n++;
     });
-    var overall = ladderPos(lv, rep.total20 / 4), ol = posLabel(overall);
+    out.interaction = null;       /* needs a conversation partner – not assessed in a monologue */
+    var overall = n ? sum / n : 0, ol = posLabel(overall);
     out.pos = Math.round(overall * 100) / 100; out.level = ol.level; out.rising = ol.rising; out.top = !!ol.top;
     out.label = ol.level + (ol.rising ? '→' + (ol.idx < 4 ? CEFR_ORDER[ol.idx] : '') : '');
-    var weak = ['gv', 'dm', 'pr', 'ic'].filter(function (k) { return out.crit[k]; }).sort(function (a, b) { return out.crit[a].pos - out.crit[b].pos; })[0];
+    var weak = ASPECTS.filter(function (k) { return out.crit[k]; }).sort(function (x, y) { return out.crit[x].pos - out.crit[y].pos; })[0];
     out.focus = weak || null;
     return out;
   }
@@ -661,18 +675,24 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     var typed = !!o.typed;
     var wpm = dur > 5 ? Math.round(words / (dur / 60)) : null;
 
+    /* STRICT MARKING: only speech the recogniser could clearly identify earns credit (clues, structure, linkers, vocabulary).
+       Segments below the confidence gate are heard but not counted – clear, accurate speaking is what is being trained. */
+    var gate = L.pLo;                                         /* A1 .45 · A2 .5 · B1 .55 · B2 .6 */
+    var clearFull = segs.filter(function (sg) { return sg.conf == null || sg.conf <= 0 || sg.conf >= gate; }).map(function (sg) { return sg.text.trim(); }).join(' ');
+    var ctoks = tokens(clearFull), cnorm = ctoks.join(' ');
+
     /* clues, structure, linkers */
-    var coverage = clueCoverage(full, data);
+    var coverage = clueCoverage(clearFull, data);
     var covN = coverage.filter(function (c) { return c.covered; }).length;
     var covFrac = coverage.length ? covN / coverage.length : 0;
-    var st = structure(full);
-    var linkersUsed = LINKERS.filter(function (l) { return new RegExp('\\b' + esc(l) + '\\b').test(norm); });
-    var subCount = (norm.match(SUB_RE) || []).length;
+    var st = structure(clearFull);
+    var linkersUsed = LINKERS.filter(function (l) { return new RegExp('\\b' + esc(l) + '\\b').test(cnorm); });
+    var subCount = (cnorm.match(SUB_RE) || []).length;
 
     /* vocabulary */
     var bank = bankItems(data), used = [], missing = [];
-    bank.forEach(function (w) { var re = itemRe(w); if (!re) return; (re.test(norm) ? used : missing).push(w); });
-    var uniq = {}; toks.forEach(function (t) { uniq[t.replace(/'/g, '')] = 1; });
+    bank.forEach(function (w) { var re = itemRe(w); if (!re) return; (re.test(cnorm) ? used : missing).push(w); });
+    var uniq = {}; ctoks.forEach(function (t) { uniq[t.replace(/'/g, '')] = 1; });
     var uniqN = Object.keys(uniq).length;
 
     /* grammar errors */
@@ -680,12 +700,29 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     segs.forEach(function (s, i) { findErrors(s.text).forEach(function (e) { e.seg = i; errors.push(e); }); });
 
     /* --- Grammar & Vocabulary --- */
-    var vocab = clamp(used.length / L.bank), variety = clamp(uniqN / L.uniq), complex = clamp(subCount / L.sub);
+    /* vocabulary credit. Word-bank words count in full. Other words count (half a point) when they are topic words for THIS game
+       (data.topicWords: synonyms/related words) within the level the student chose (that level or one below) and not repeated.
+       Only words in clearly recognised segments count (strict marking). */
+    function stem(w) { return w.replace(/(ing|ed|es|s)$/, ''); }
+    var order = ['A1', 'A2', 'B1', 'B2'], li = order.indexOf(o.level);
+    /* tiers follow the general CEFR order A1<A2<B1<B2: words at the student's level (or one below) earn 0.5; words ABOVE the chosen level are a
+       "stretch" and earn a full point as a bonus (praised on the result screen). */
+    var topicMap = {};
+    order.forEach(function (t, ti) { ((data.topicWords || {})[t] || []).forEach(function (w) { var k = stem(w.toLowerCase()); if (!topicMap[k] || ti > topicMap[k].ti) topicMap[k] = { w: w, tier: t, ti: ti }; }); });
+    var clearToks = {};
+    ctoks.forEach(function (t) { clearToks[t.replace(/'/g, '')] = 1; });
+    var usedStems = used.map(function (u) { return stem(u.toLowerCase()); });
+    var ownAll = Object.keys(clearToks).filter(function (w) { var st = stem(w); return topicMap[st] && usedStems.indexOf(st) < 0 && used.every(function (u) { return u.toLowerCase().indexOf(w) < 0; }); });
+    var own = ownAll.filter(function (w) { var m = topicMap[stem(w)]; return m.ti <= li && m.ti >= Math.max(0, li - 1); });
+    var stretch = ownAll.filter(function (w) { return topicMap[stem(w)].ti > li; }).map(function (w) { return { word: w, tier: topicMap[stem(w)].tier }; });
+    var vocabCredit = used.length + 0.5 * Math.min(own.length, 2 * L.bank) + 1 * Math.min(stretch.length, 3);
+    var vocab = clamp(vocabCredit / L.bank), variety = clamp(uniqN / L.uniq), complex = clamp(subCount / L.sub);
     /* grammar accuracy: errors per 100 words, relative to what the level tolerates (50% accuracy at L.tol errors/100 words) */
     var errPer100 = words ? errors.length / words * 100 : 0;
     var accuracy = 1 / (1 + errPer100 / L.tol);
     var gvRaw = (0.4 * vocab + 0.3 * variety + 0.3 * complex) * accuracy;
     var gv = half(clamp(gvRaw) * 5);
+    var rangeBand = half(clamp(0.4 * vocab + 0.3 * variety + 0.3 * complex) * 5), accBand = half(accuracy * 5);
     if (words < L.minWords * 0.4) gv = Math.min(gv, 2);
 
     /* --- Discourse Management --- */
@@ -701,6 +738,8 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     if (!typed && confs.length) {
       avgConf = confs.reduce(function (a, s) { return a + s.conf; }, 0) / confs.length;
       var good = confs.filter(function (s) { return s.conf >= 0.7; }).length / confs.length;
+      /* intelligibility: a foreign accent is fine if the listener still gets the message – so besides recognition confidence,
+         count how much of the intended content (the clues) was understood */
       var prRaw = 0.7 * clamp((avgConf - L.pLo) / (0.92 - L.pLo)) + 0.3 * good;
       pr = half(clamp(prRaw) * 5);
       if (words < L.minWords * 0.4) pr = Math.min(pr, 2);
@@ -725,12 +764,17 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     var num = WEIGHTS.gv * gv + WEIGHTS.dm * dm + WEIGHTS.ic * ic, den = 5 * (WEIGHTS.gv + WEIGHTS.dm + WEIGHTS.ic);
     if (pr != null) { num += WEIGHTS.pr * pr; den += 5 * WEIGHTS.pr; }
     var total20 = num / den * 20;
-    total20 = half(Math.min(total20, 20 * (0.3 + 0.7 * accuracy)));      /* many grammar errors cap the overall score */
+    total20 = Math.min(total20, 20 * (0.3 + 0.7 * accuracy));            /* many grammar errors cap the overall score */
+    /* strict caps: answering only some of the clues, or being hard to recognise, limits the overall score (out of 10: 0 clues 1.5 · 1/4 → 3.5 · 2/4 → 5.5 · 3/4 → 7.5 · all → 10) */
+    var covCap10 = coverage.length ? [1.5, 3.5, 5.5, 7.5, 10][Math.min(4, Math.round(covFrac * 4))] : 10;
+    total20 = Math.min(total20, covCap10 * 2);
+    if (pr != null) total20 = Math.min(total20, 20 * (0.35 + 0.65 * pr / 5));      /* pronunciation 5 → no cap · 2.5 → 67% · 0 → 35% */
+    total20 = half(total20);
     var score10 = Math.round(total20 / 2 * 10) / 10;
     var stars = score10 >= 8 ? 3 : score10 >= 6 ? 2 : score10 >= 4 ? 1 : 0;
 
     var rank = score10 >= 9 ? ['Speaking Champion', '🏆'] : score10 >= 7.5 ? ['Star Speaker', '⭐'] : score10 >= 6 ? ['Confident Talker', '💬'] : score10 >= 4 ? ['Explorer', '🧭'] : ['Starter', '🌱'];
-    var xp = Math.round(total20 * 10 + covN * 25 + stars * 30);
+    var xp = Math.round(total20 * 10 + covN * 25 + stars * 30 + Math.min(stretch.length, 5) * 20);
 
     var rep = {
       level: o.level, words: words, wpm: wpm, duration: Math.round(dur), typed: typed, avgConf: avgConf,
@@ -740,9 +784,9 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
       },
       total20: total20, score10: score10, stars: stars, rank: rank, xp: xp,
       coverage: coverage, covN: covN, intro: st.intro, conclusion: st.conclusion,
-      linkersUsed: linkersUsed, subCount: subCount, bankUsed: used, bankMissing: missing,
+      linkersUsed: linkersUsed, subCount: subCount, bankUsed: used, bankMissing: missing, ownWords: own, stretchWords: stretch, vocabCredit: vocabCredit,
       errors: errors, errPer100: Math.round(errPer100 * 10) / 10, accuracy: accuracy, lowSegs: lowSegs, uniq: uniqN, silenceRatio: o.silenceRatio == null ? null : o.silenceRatio,
-      wpmScore: wpmScore, pauseScore: pauseScore, durScore: durScore, L: L
+      wpmScore: wpmScore, pauseScore: pauseScore, durScore: durScore, L: L, rangeBand: rangeBand, accBand: accBand
     };
     ['gv', 'dm', 'pr', 'ic'].forEach(function (k) {
       var c = rep.criteria[k]; c.name = NAMES[k];
@@ -784,16 +828,16 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
       add(2, '🔗', 'Discourse Management', 'Dùng ít từ nối (' + r.linkersUsed.length + '/' + L.linkers + '). Thêm: ' + suggest.join(', ') + '.', 'First, … Also, … I like it because … Finally, …');
     }
     if (lv === 'B2' && r.subCount < 3) add(2, '🧠', 'Grammar & Vocabulary', 'Level B2 cần câu phức: thử although / which / who / if / when.', 'My school, which is near my house, is quite big although it is old.');
-    if (r.errors.length >= 3) add(0, '🔎', 'Grammar & Vocabulary', 'Máy tìm thấy ' + r.errors.length + ' lỗi ngữ pháp thường gặp (' + r.errPer100 + ' lỗi/100 từ). Máy chưa nhận ra hết mọi dạng lỗi – cô giáo sẽ kiểm tra thêm.', 'Hãy sửa các lỗi bên dưới rồi nói lại.');
+    if (r.errors.length >= 3) add(0, '🔎', 'Grammar & Vocabulary', 'Cô thấy ' + r.errors.length + ' lỗi ngữ pháp trong bài nói của em (' + r.errPer100 + ' lỗi/100 từ).', 'Hãy sửa các lỗi bên dưới rồi nói lại.');
     r.errors.slice(0, 6).forEach(function (e) {
       add(1, '✏️', 'Grammar & Vocabulary', e.msg + '.  “' + e.bad + '” → “' + e.good + '”');
     });
-    if (r.bankUsed.length < L.bank && r.bankMissing.length) {
-      add(2, '📚', 'Grammar & Vocabulary', 'Dùng thêm từ trong Word bank (' + r.bankUsed.length + '/' + L.bank + '): ' + r.bankMissing.slice(0, 5).join(', ') + '.');
+    if (r.vocabCredit < L.bank && r.bankMissing.length) {
+      add(2, '📚', 'Grammar & Vocabulary', 'Nói thêm từ vựng về chủ đề, vừa sức level ' + lv + ' – dùng từ trong Word bank hoặc từ đồng nghĩa phù hợp đều được (hiện ' + r.bankUsed.length + ' từ Word bank + ' + r.ownWords.length + ' từ đồng nghĩa/liên quan). Gợi ý: ' + r.bankMissing.slice(0, 5).join(', ') + '.');
     }
     if (r.criteria.pr.score != null && r.criteria.pr.score < 3.5) {
       var pf = (data.pronFocus || []).slice(0, 3).map(function (p) { return p.word + ' ' + (p.ipa || ''); }).join(' · ');
-      add(1, '🔊', 'Pronunciation', 'Máy nghe chưa rõ một số câu (gạch cam trong bài). Nói chậm hơn, tròn vành rõ chữ, đọc rõ âm cuối (-s, -ed, -t).', pf ? 'Luyện các từ: ' + pf : '');
+      add(1, '🔊', 'Pronunciation', 'Có vài câu cô nghe chưa rõ (gạch cam trong bài)' + (r.covN >= 3 ? '; ý chính của em thì cô vẫn hiểu' : '') + '. Nói chậm hơn, tròn vành rõ chữ, đọc rõ âm cuối (-s, -ed, -t) để người nghe không phải đoán.', pf ? 'Luyện các từ: ' + pf : '');
     }
     if (r.wpm != null) {
       if (r.wpm < L.wpm[0]) add(2, '🐢', 'Interactive Communication', 'Tốc độ nói chậm (' + r.wpm + ' từ/phút, mục tiêu ' + L.wpm[0] + '–' + L.wpm[1] + '). Chuẩn bị ý trước để ít ngập ngừng.');
@@ -811,6 +855,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
     best.slice(0, 2).forEach(function (k) {
       if (r.criteria[k].score >= 3) S.push(NAMES[k][1] + ' (' + r.criteria[k].score + '/5): ' + r.criteria[k].desc[1]);
     });
+    if (r.stretchWords && r.stretchWords.length) S.push('🌟 Điểm thưởng từ vựng! Em dùng từ cao hơn level ' + lv + ': ' + r.stretchWords.slice(0, 4).map(function (x) { return x.word + ' (' + x.tier + ')'; }).join(', ') + ' (+' + Math.min(r.stretchWords.length, 5) * 20 + ' XP). Giỏi lắm!');
     if (r.covN === r.coverage.length) S.push('Em đã trả lời đủ ' + r.coverage.length + ' gợi ý của đề.');
     if (r.intro && r.conclusion) S.push('Bài nói có đủ mở bài và kết bài.');
     if (!S.length) S.push('Em đã dám nói – đó là bước quan trọng nhất! Hãy nghe bài mẫu rồi thử lại.');
@@ -840,7 +885,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
       for (i = 0; i < n; i++) { if (f[i] !== cur) { flush(); cur = f[i]; curStart = i; } buf += text[i]; }
       flush();
       var low_ = s.conf != null && s.conf > 0 && s.conf < 0.7;
-      html += '<span class="seg' + (low_ ? ' low' : '') + '"' + (low_ ? ' title="Máy nghe chưa rõ câu này (' + Math.round(s.conf * 100) + '%)"' : '') + '>' + out + '</span> ';
+      html += '<span class="seg' + (low_ ? ' low' : '') + '"' + (low_ ? ' title="Câu này nghe chưa rõ (' + Math.round(s.conf * 100) + '%)"' : '') + '>' + out + '</span> ';
     });
     return html;
   }
@@ -1173,7 +1218,7 @@ input.wide{width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(
 </script>
 <script>
 "use strict";
-const DATA = {"meta": {"id": "g8-speaking-topic2-countryside", "topicNo": 2, "title": "Life in the Countryside", "subtitle": "Talk about a countryside place you know or would like to visit.", "grade": "Grade 8", "unit": "Unit 2", "art": "countryside", "emoji": "🌾", "sheetUrl": "https://script.google.com/macros/s/AKfycbxBJL38GXIFT-WzItne3756-UJG0Usz8GuWy56KTh7eOsKM97_xll1UXRd2bswNh3vr4Q/exec", "token": "speakinggk1"}, "task": {"instruction": "Prepare and give a 1-minute talk about this topic.", "requirements": ["Have 3 parts: Introduction → Main points (answer ALL FOUR questions) → Conclusion", "Last about 1 minute", "Use words from the word bank and linking words (first, also, because, but, so, finally)", "Be clear and natural – look at your listeners and use short notes, do not read a full script"], "usefulLanguage": ["Today I’m going to talk about … / I’d like to share …", "First, … Also, … Finally, …", "because … / so … / but …", "That’s all. Thank you for listening.", "Compared with the city, … more slowly / more safely / more freely …"]}, "clues": [{"id": 1, "text": "What is the place, and where is it?", "vi": "Đó là nơi nào, ở đâu?", "groups": ["\\b(village|countryside|town|farm|valley|island|mountain|hill|province|district|commune|hamlet|place)\\b", "\\b(in|near|north|south|east|west|about|far from|kilometres?|km|hours?|province|province of|from)\\b"], "min": 2, "scaffold": {"A1": "It is ____. It is in ____.", "A2": "The place is … It is in … about … from …", "B1": "name + location + how far / how to get there", "B2": "name + location + why you know it / want to visit it"}}, {"id": 2, "text": "What does it look like? What are the people like?", "vi": "Nơi đó trông như thế nào? Người dân thế nào?", "groups": ["\\b(look|looks|looks like|there are|there is|has|have)\\b", "\\b(green|peaceful|quiet|beautiful|fresh|fields?|rice|paddy|river|trees?|hills?|mountains?|buffalo\\w*|cows?|houses?|gardens?|sky|air|lake)\\b", "\\b(friendly|kind|hard-working|hardworking|helpful|generous|warm|welcoming|simple|polite)\\b"], "min": 2, "scaffold": {"A1": "It is ____ and ____. The people are ____.", "A2": "It is green and peaceful. There are … The people are …", "B1": "two things you see + two adjectives for people", "B2": "vivid description + people + how they make you feel"}}, {"id": 3, "text": "What TWO activities can you do there?", "vi": "Làm được HAI hoạt động nào ở đó?", "groups": ["\\b(you can|can|we can|i can|activities|activity|do)\\b", "\\b(fly|flying|kites?|ride|riding|fish|fishing|swim|swimming|pick|picking|fruit|feed|feeding|play|playing|walk|walking|climb|climbing|camp|camping|harvest|help|helping|cook|cooking|catch|catching|bike|cycling|paddle|collect\\w*)\\b"], "min": 2, "scaffold": {"A1": "You can ____. You can also ____.", "A2": "You can … and you can also …", "B1": "activity 1 + activity 2 + a detail for each", "B2": "two activities + why they are fun there"}}, {"id": 4, "text": "How can you do ONE activity differently there compared with in the city? (comparative adverb)", "vi": "Một hoạt động khác thế nào so với ở thành phố? (trạng từ so sánh)", "groups": ["\\b(more\\s+(slowly|safely|freely|quietly|peacefully|carefully|easily|happily|comfortably|calmly)|(slower|faster|better|harder|closer|louder|longer)|less\\s+(\\w+ly))\\b", "\\b(than|compared with|compared to|in the city|city|differently|different)\\b"], "min": 2, "scaffold": {"A1": "In the countryside, I can ride ____ than in the city.", "A2": "I can ride my bike more safely than in the city because …", "B1": "activity + comparative adverb + than in the city + reason", "B2": "activity + comparative adverb + reason + how it feels"}}], "wordBank": {"nouns": ["countryside", "village", "rice field", "buffalo", "fresh air", "kite", "river", "harvest"], "verbs": ["fly a kite", "ride", "fish", "pick fruit", "feed", "relax", "visit"], "adjectives": ["peaceful", "friendly", "hard-working", "green", "quiet", "fresh"], "prepositions": [], "phrases": ["It is in … about … kilometres from …", "There are … The people are …", "You can … and you can also …", "more slowly / more safely / more freely … than in the city"]}, "pronFocus": [{"word": "countryside", "ipa": "/ˈkʌntrisaɪd/", "tip": "KUN-tri-said: “ou” đọc /ʌ/."}, {"word": "peaceful", "ipa": "/ˈpiːsfl/", "tip": "PEACE-fl, nhấn âm 1."}, {"word": "buffalo", "ipa": "/ˈbʌfələʊ/", "tip": "BUF-ə-lô, nhấn âm 1."}, {"word": "hard-working", "ipa": "/ˌhɑːdˈwɜːkɪŋ/", "tip": "Nhấn cả hard và WORK."}, {"word": "safely", "ipa": "/ˈseɪfli/", "tip": "SAFE-li, trạng từ so sánh: more safely."}, {"word": "harvest", "ipa": "/ˈhɑːvɪst/", "tip": "HAR-vist, nhấn âm 1."}], "samples": {"A1": [{"part": "intro", "text": "Hello everyone. Today I'm going to talk about a countryside place. It is my grandparents' village."}, {"part": "main", "text": "It is in Nam Dinh, about one hundred kilometres from Ha Noi. It is green and quiet. The people are kind."}, {"part": "main", "text": "You can fly a kite and ride a bike there. I can ride more slowly than in the city."}, {"part": "conclusion", "text": "That's all. Thank you for listening."}], "A2": [{"part": "intro", "text": "Hello everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is green and peaceful. There are rice fields, a small river and many trees. The people are friendly and hard-working."}, {"part": "main", "text": "Also, you can do many activities there. You can fly a kite and you can fish in the river."}, {"part": "main", "text": "Finally, I can ride my bike more safely there than in the city because there are not many cars."}, {"part": "conclusion", "text": "That's all. Thank you for listening."}], "B1": [{"part": "intro", "text": "Good morning, everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is a green and peaceful place. There are big rice fields, a small river and a lot of tall trees. The people are friendly and hard-working, so they always help each other."}, {"part": "main", "text": "Also, you can do many interesting activities there. You can fly a kite in the fields, and you can fish in the river with my grandfather."}, {"part": "main", "text": "Finally, I can ride my bike more safely there than in the city because there are not many cars, but there are many quiet paths."}, {"part": "conclusion", "text": "In short, the countryside is quiet and beautiful. That's all. Thank you for listening."}], "B2": [{"part": "intro", "text": "Good morning, everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is a green and peaceful place. There are big rice fields, a small river and a lot of tall trees. The people are friendly and hard-working, and they always help each other."}, {"part": "main", "text": "Also, you can do many interesting activities there. You can fly a kite in the fields, and you can fish in the river with my grandfather."}, {"part": "main", "text": "Finally, I can ride my bike more safely and more freely there than in the city because there are not many cars, but there are many quiet paths."}, {"part": "conclusion", "text": "In short, the countryside is quiet, beautiful and full of fresh air. I would love to go back there soon. That's all. Thank you for listening."}]}, "cues": {"intro": "Hello everyone. Today I'm going to talk about …", "center": "A Countryside Place", "nodes": [{"label": "What / Where?", "words": ["village · farm …", "in … · km from …"]}, {"label": "Look like / People", "words": ["green · peaceful", "friendly · hard-working"]}, {"label": "2 activities", "words": ["fly a kite · fish", "ride · swim"]}, {"label": "Comparison", "words": ["more safely / slowly …", "than in the city"]}], "conclusion": "In short, … That's all. Thank you for listening."}};
+const DATA = {"meta": {"id": "g8-speaking-topic2-countryside", "topicNo": 2, "title": "Life in the Countryside", "subtitle": "Talk about a countryside place you know or would like to visit.", "grade": "Grade 8", "unit": "Unit 2", "art": "countryside", "emoji": "🌾", "sheetUrl": "https://script.google.com/macros/s/AKfycbyH_5VOmNflPsgA2lqye0p-psr47M2JBH_N3GxoEAQqjE4yS7B4AY9sKS4HIojREq4a/exec", "token": "speakinggk1", "author": "Teacher Thuy"}, "task": {"instruction": "Prepare and give a 1-minute talk about this topic.", "requirements": ["Have 3 parts: Introduction → Main points (answer ALL FOUR questions) → Conclusion", "Last about 1 minute", "Use words from the word bank and linking words (first, also, because, but, so, finally)", "Be clear and natural – look at your listeners and use short notes, do not read a full script"], "usefulLanguage": ["Today I’m going to talk about … / I’d like to share …", "First, … Also, … Finally, …", "because … / so … / but …", "That’s all. Thank you for listening.", "Compared with the city, … more slowly / more safely / more freely …"]}, "clues": [{"id": 1, "text": "What is the place, and where is it?", "vi": "Đó là nơi nào, ở đâu?", "groups": ["\\b(village|countryside|town|farm|valley|island|mountain|hill|province|district|commune|hamlet|place)\\b", "\\b(in|near|north|south|east|west|about|far from|kilometres?|km|hours?|province|province of|from)\\b"], "min": 2, "scaffold": {"A1": "It is ____. It is in ____.", "A2": "The place is … It is in … about … from …", "B1": "name + location + how far / how to get there", "B2": "name + location + why you know it / want to visit it"}}, {"id": 2, "text": "What does it look like? What are the people like?", "vi": "Nơi đó trông như thế nào? Người dân thế nào?", "groups": ["\\b(look|looks|looks like|there are|there is|has|have)\\b", "\\b(green|peaceful|quiet|beautiful|fresh|fields?|rice|paddy|river|trees?|hills?|mountains?|buffalo\\w*|cows?|houses?|gardens?|sky|air|lake)\\b", "\\b(friendly|kind|hard-working|hardworking|helpful|generous|warm|welcoming|simple|polite)\\b"], "min": 2, "scaffold": {"A1": "It is ____ and ____. The people are ____.", "A2": "It is green and peaceful. There are … The people are …", "B1": "two things you see + two adjectives for people", "B2": "vivid description + people + how they make you feel"}}, {"id": 3, "text": "What TWO activities can you do there?", "vi": "Làm được HAI hoạt động nào ở đó?", "groups": ["\\b(you can|can|we can|i can|activities|activity|do)\\b", "\\b(fly|flying|kites?|ride|riding|fish|fishing|swim|swimming|pick|picking|fruit|feed|feeding|play|playing|walk|walking|climb|climbing|camp|camping|harvest|help|helping|cook|cooking|catch|catching|bike|cycling|paddle|collect\\w*)\\b"], "min": 2, "scaffold": {"A1": "You can ____. You can also ____.", "A2": "You can … and you can also …", "B1": "activity 1 + activity 2 + a detail for each", "B2": "two activities + why they are fun there"}}, {"id": 4, "text": "How can you do ONE activity differently there compared with in the city? (comparative adverb)", "vi": "Một hoạt động khác thế nào so với ở thành phố? (trạng từ so sánh)", "groups": ["\\b(more\\s+(slowly|safely|freely|quietly|peacefully|carefully|easily|happily|comfortably|calmly)|(slower|faster|better|harder|closer|louder|longer)|less\\s+(\\w+ly))\\b", "\\b(than|compared with|compared to|in the city|city|differently|different)\\b"], "min": 2, "scaffold": {"A1": "In the countryside, I can ride ____ than in the city.", "A2": "I can ride my bike more safely than in the city because …", "B1": "activity + comparative adverb + than in the city + reason", "B2": "activity + comparative adverb + reason + how it feels"}}], "wordBank": {"nouns": ["countryside", "village", "rice field", "buffalo", "fresh air", "kite", "river", "harvest"], "verbs": ["fly a kite", "ride", "fish", "pick fruit", "feed", "relax", "visit"], "adjectives": ["peaceful", "friendly", "hard-working", "green", "quiet", "fresh"], "prepositions": [], "phrases": ["It is in … about … kilometres from …", "There are … The people are …", "You can … and you can also …", "more slowly / more safely / more freely … than in the city"]}, "pronFocus": [{"word": "countryside", "ipa": "/ˈkʌntrisaɪd/", "tip": "KUN-tri-said: “ou” đọc /ʌ/."}, {"word": "peaceful", "ipa": "/ˈpiːsfl/", "tip": "PEACE-fl, nhấn âm 1."}, {"word": "buffalo", "ipa": "/ˈbʌfələʊ/", "tip": "BUF-ə-lô, nhấn âm 1."}, {"word": "hard-working", "ipa": "/ˌhɑːdˈwɜːkɪŋ/", "tip": "Nhấn cả hard và WORK."}, {"word": "safely", "ipa": "/ˈseɪfli/", "tip": "SAFE-li, trạng từ so sánh: more safely."}, {"word": "harvest", "ipa": "/ˈhɑːvɪst/", "tip": "HAR-vist, nhấn âm 1."}], "samples": {"A1": [{"part": "intro", "text": "Hello everyone. Today I'm going to talk about a countryside place. It is my grandparents' village."}, {"part": "main", "text": "It is in Nam Dinh, about one hundred kilometres from Ha Noi. It is green and quiet. The people are kind."}, {"part": "main", "text": "You can fly a kite and ride a bike there. I can ride more slowly than in the city."}, {"part": "conclusion", "text": "That's all. Thank you for listening."}], "A2": [{"part": "intro", "text": "Hello everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is green and peaceful. There are rice fields, a small river and many trees. The people are friendly and hard-working."}, {"part": "main", "text": "Also, you can do many activities there. You can fly a kite and you can fish in the river."}, {"part": "main", "text": "Finally, I can ride my bike more safely there than in the city because there are not many cars."}, {"part": "conclusion", "text": "That's all. Thank you for listening."}], "B1": [{"part": "intro", "text": "Good morning, everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is a green and peaceful place. There are big rice fields, a small river and a lot of tall trees. The people are friendly and hard-working, so they always help each other."}, {"part": "main", "text": "Also, you can do many interesting activities there. You can fly a kite in the fields, and you can fish in the river with my grandfather."}, {"part": "main", "text": "Finally, I can ride my bike more safely there than in the city because there are not many cars, but there are many quiet paths."}, {"part": "conclusion", "text": "In short, the countryside is quiet and beautiful. That's all. Thank you for listening."}], "B2": [{"part": "intro", "text": "Good morning, everyone. Today I'd like to talk about a countryside place that I know well. It is my grandparents' village."}, {"part": "main", "text": "First, the village is in Nam Dinh, about one hundred kilometres from Ha Noi. It is a green and peaceful place. There are big rice fields, a small river and a lot of tall trees. The people are friendly and hard-working, and they always help each other."}, {"part": "main", "text": "Also, you can do many interesting activities there. You can fly a kite in the fields, and you can fish in the river with my grandfather."}, {"part": "main", "text": "Finally, I can ride my bike more safely and more freely there than in the city because there are not many cars, but there are many quiet paths."}, {"part": "conclusion", "text": "In short, the countryside is quiet, beautiful and full of fresh air. I would love to go back there soon. That's all. Thank you for listening."}]}, "cues": {"intro": "Hello everyone. Today I'm going to talk about …", "center": "A Countryside Place", "nodes": [{"label": "What / Where?", "words": ["village · farm …", "in … · km from …"]}, {"label": "Look like / People", "words": ["green · peaceful", "friendly · hard-working"]}, {"label": "2 activities", "words": ["fly a kite · fish", "ride · swim"]}, {"label": "Comparison", "words": ["more safely / slowly …", "than in the city"]}], "conclusion": "In short, … That's all. Thank you for listening."}, "topicWords": {"A1": ["big", "buffalo", "cow", "farm", "field", "grandfather", "grandmother", "green", "house", "kind", "quiet", "rice", "river", "small", "tree", "village"], "A2": ["air", "beautiful", "countryside", "farmer", "fish", "fishing", "fly", "freely", "fresh", "friendly", "fruit", "garden", "hard-working", "harvest", "hill", "kite", "lake", "mountain", "paddy", "peaceful", "pick", "ride", "safely", "slowly", "swim"], "B1": ["agriculture", "atmosphere", "crowded", "generous", "hospitable", "landscape", "pollution", "relaxing", "scenery", "simple", "traditional", "traffic"], "B2": ["cultivate", "hospitality", "livelihood", "picturesque", "rural", "tranquil"]}};
 const E = window.SpeakingEngine;
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -1190,6 +1235,8 @@ const store = {
 };
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const FILE_MODE = location.protocol === 'file:';
+/* EXAM BUILD: true only in the separate exam build (build_speaking.py --exam). The practice build has no exam code at all. */
+const EXAM = /*__EXAM__*/false;
 /* Speaking only: typing a talk is OFF for students. Teachers can test with ?type=1 (or meta.allowTyping). */
 const ALLOW_TYPING = new URLSearchParams(location.search).has('type') || !!(DATA.meta && DATA.meta.allowTyping);
 const TYPE_OR = ALLOW_TYPING ? ', or type your talk' : '';
@@ -1242,6 +1289,7 @@ function speak(text, rate, onend) {
 function initWelcome() {
   const m = DATA.meta;
   $('#brandSub').textContent = (m.grade ? m.grade + ' · ' : '') + (m.unit || '');
+  if (m.author) { const a = esc(m.author); $('#brandSub').insertAdjacentHTML('beforeend', ' · by ' + a); const cr = document.createElement('div'); cr.className = 'credit'; cr.id = 'credit'; cr.innerHTML = '© ' + new Date().getFullYear() + ' <b>' + a + '</b> · Speaking Quest'; document.body.appendChild(cr); document.title += ' · ' + m.author; }
   const art = $('#heroArt');
   if (m.image) { art.innerHTML = '<img alt="' + esc(m.title) + '" src="' + m.image + '">'; }
   else art.innerHTML = (window.SQ_ART[m.art] || window.SQ_ART.school).replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
@@ -1268,9 +1316,11 @@ function initWelcome() {
   }
   setLevel('A2');   // default A2; students pick another level themselves
   $$('.lvbtn').forEach(b => b.onclick = () => setLevel(b.dataset.l));
+  
   $('#btnStart').onclick = () => {
     const n = $('#inName').value.trim(); if (!n) { toast('Please type your name first 😊'); $('#inName').focus(); return; }
     S.name = n; S.cls = $('#inClass').value.trim(); store.set('sq_name', n); store.set('sq_class', S.cls);
+    
     openStage();
   };
 }
@@ -1371,7 +1421,7 @@ async function micTest() {
   } finally { try { ctx && ctx.close(); } catch (e) { } setTimeout(() => { bar.style.display = 'none'; lvl.style.width = 0; }, 1500); }
 }
 function resetRec() {
-  stopAll(true); S.segs = []; S.interim = ''; S.frames = []; S.chunks = []; S.lastAudio = null;
+  stopAll(true); S.segs = []; S.interim = ''; S.frames = []; S.chunks = []; S.lastAudio = null; S.lastBlob = null;
   $('#live').innerHTML = ''; $('#tNow').textContent = '0:00'; setRing(0);
   $('#status').textContent = 'Tap the microphone and start talking!'; $('#btnMic').textContent = '🎤'; $('#btnMic').classList.remove('rec');
   updateLive('');
@@ -1416,7 +1466,7 @@ async function startRec() {
   } catch (e) { S.an = null; }
   try {
     const mt = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
-    S.mr = new MediaRecorder(S.stream, mt ? { mimeType: mt } : undefined); S.chunks = [];
+    S.mr = new MediaRecorder(S.stream, Object.assign(mt ? { mimeType: mt } : {}, EXAM ? { audioBitsPerSecond: 24000 } : {})); S.chunks = [];
     S.mr.ondataavailable = ev => { if (ev.data.size) S.chunks.push(ev.data); };
     S.mr.start(500);
   } catch (e) { S.mr = null; }
@@ -1472,6 +1522,7 @@ function tick() {
     let s = 0; for (let i = 0; i < a.length; i++) { const v = (a[i] - 128) / 128; s += v * v; }
     S.frames.push(Math.sqrt(s / a.length));
   }
+  
   if (el >= MAXS) stopRec();
 }
 function drawWave() {
@@ -1490,7 +1541,7 @@ function stopAll(silent) {
   S.rec = false; setCueMode(false); clearInterval(S.timer); cancelAnimationFrame(S.raf);
   try { S.sr && (S.sr.onend = null, S.sr.stop()); } catch (e) { } S.sr = null;
   try { S.mr && S.mr.state !== 'inactive' && S.mr.stop(); } catch (e) { }
-  clearTimeout(S.idle); S.idle = setTimeout(releaseStream, 180000);
+  clearTimeout(S.idle);  S.idle = setTimeout(releaseStream, 180000);
   try { S.ctx && S.ctx.close(); } catch (e) { } S.ctx = null; S.an = null;
   if (!silent) drawWave();
 }
@@ -1511,13 +1562,15 @@ function voiceStats(frames, total) {
 }
 function finish(total, frames) {
   const txt = S.segs.map(s => s.text).join(' ').trim();
+  
   if (!txt) {
     if (SR) { $('#status').textContent = '😕 I could not hear any words. Check your microphone and try again.'; }
     showTyped(true); return;
   }
   const v = voiceStats(frames, total);
   const rep = E.analyze({ data: DATA, level: S.level, segments: S.segs.map(s => ({ text: s.text, conf: s.conf })), duration: v.dur, silenceRatio: v.sr, typed: false });
-  if (S.chunks.length) { try { S.lastAudio = URL.createObjectURL(new Blob(S.chunks, { type: (S.mr && S.mr.mimeType) || 'audio/webm' })); } catch (e) { } }
+  if (S.chunks.length) { try { S.lastBlob = new Blob(S.chunks, { type: (S.mr && S.mr.mimeType) || 'audio/webm' }); S.lastAudio = URL.createObjectURL(S.lastBlob); } catch (e) { } }
+  
   showResult(rep);
 }
 function showTyped(on) { $('#typedBox').style.display = on && ALLOW_TYPING ? 'block' : 'none'; }
@@ -1530,7 +1583,10 @@ function scoreTyped() {
 
 /* ---------- result ---------- */
 const CRIT_COL = { gv: '#38bdf8', dm: '#c084fc', pr: '#fb923c', ic: '#34d399' };
+
+
 function showResult(rep) {
+  
   S.lastReport = rep;
   const m = DATA.meta, C = rep.criteria, segs = S.typed || rep.typed ? [{ text: $('#typedTxt').value.trim(), conf: null }] : S.segs;
   const circ = 2 * Math.PI * 80;
@@ -1545,12 +1601,12 @@ function showResult(rep) {
     const steps = order.map((l, i) => `<div class="st ${i + 1 < idx ? 'done' : i + 1 === idx ? 'here' : ''}">${l}<small>${['Starter', 'Elementary', 'Intermediate', 'Upper-Inter.'][i]}</small></div>`).join('');
     const pinLeft = ((Math.max(1, Math.min(4.99, cf.pos)) - 1) / 4 + 0.125) * 100;
     const headline = cf.level === 'Pre-A1' ? 'Chưa đạt A1 – cùng luyện từng bước nhé' : `Em đang ở trình độ ${cf.level}${cf.top ? ' (rất vững, sẵn sàng cao hơn)' : cf.rising ? ' – đang tiến gần ' + order[Math.min(3, order.indexOf(cf.level) + 1)] : ' (đang củng cố)'}`;
-    const rows = ['gv', 'dm', 'pr', 'ic'].map(k => { const c = cf.crit[k]; const nm = C[k].name; if (!c) return `<div class="row"><div class="lv">${nm[1]}<small>Chưa chấm</small></div><div><p class="nx">Cần nhận diện giọng nói (Safari/Chrome) để đánh giá tiêu chí này.</p></div></div>`; return `<div class="row"><div class="lv">${c.level}${c.rising ? '→' : ''}<small>${nm[1]}</small></div><div><p class="can">✅ Em làm được: ${esc(c.can[1])}</p>${c.next ? `<p class="nx">🎯 Để lên ${c.next.level}: ${esc(c.next.text[1])}</p>` : '<p class="nx">🎯 Em đã chạm mức cao nhất của thang này ở tiêu chí này.</p>'}</div></div>`; }).join('');
-    const focus = cf.focus ? `<p style="margin-top:12px;font-weight:800">🔭 Ưu tiên luyện: <span style="color:#fbbf24">${esc(C[cf.focus].name[1])}</span> – tiêu chí đang thấp nhất.</p>` : '';
+    const rows = cf.aspects.map(k => { const c = cf.crit[k]; const nm = cf.names[k]; if (!c) return `<div class="row"><div class="lv">–<small>${nm[1]}<br>${nm[0]}</small></div><div><p class="nx">Chưa chấm được tiêu chí này (cần nhận diện giọng nói bằng Safari/Chrome).</p></div></div>`; return `<div class="row"><div class="lv">${c.level}${c.rising ? '→' : ''}<small>${nm[1]}<br>${nm[0]}</small></div><div><p class="can">✅ Em làm được: ${esc(c.can[1])}</p><p class="en" style="color:var(--dim);font-size:.82rem;font-style:italic;margin:0 0 4px">${esc(c.can[0])}</p>${c.next ? `<p class="nx">🎯 Để lên ${c.next.level}: ${esc(c.next.text[1])}</p>` : '<p class="nx">🎯 Em đã chạm mức cao nhất của thang này ở tiêu chí này.</p>'}</div></div>`; }).join('') + `<div class="row"><div class="lv" style="color:var(--dim)">–<small>${cf.names.interaction[1]}<br>${cf.names.interaction[0]}</small></div><div><p class="nx" style="color:var(--dim)">Tiêu chí này cần hỏi – đáp, nhường lượt với người đối thoại nên chưa chấm trong bài nói một mình.</p></div></div>`;
+    const focus = cf.focus ? `<p style="margin-top:12px;font-weight:800">🔭 Ưu tiên luyện: <span style="color:#fbbf24">${esc(cf.names[cf.focus][1])}</span> – tiêu chí đang thấp nhất.</p>` : '';
     return `<div class="cefr"><div class="eyebrow">🪜 CEFR · Em đang ở đâu?</div><h3>${headline}</h3>
       <div class="ladder">${steps}<span class="pin" style="left:${pinLeft}%">Em ở đây</span></div>
       <div class="rows">${rows}</div>${focus}
-      <p class="note">Ước lượng từ MỘT bài nói theo thang A1–B2 (tham chiếu tiêu chí nói của Cambridge English và CEFR). Đây là gợi ý để luyện tập, không phải chứng chỉ – kết quả chính thức do cô giáo đánh giá.</p></div>`;
+      <p class="note">Nhận xét dành riêng cho bài nói này của em, theo 5 tiêu chí của Hội đồng châu Âu (CEFR – bảng Qualitative aspects of spoken language use: Range, Accuracy, Fluency, Coherence + Phonology). Mô tả tiếng Anh lấy từ bảng chuẩn, dịch tiếng Việt. Muốn chắc chắn ở level cao hơn, em hãy chọn level đó và nói lại.</p></div>`;
   })();
 
   const tipsHtml = rep.tips.length ? rep.tips.map(t => `<div class="tip"><div class="ic">${t.icon}</div><div><b>${t.area}</b>${esc(t.vi)}${t.ex ? '<div class="ex">' + esc(t.ex) + '</div>' : ''}</div></div>`).join('') : '<div class="good">🎉 Không có điểm cần sửa lớn – hãy thử level cao hơn!</div>';
@@ -1642,7 +1698,7 @@ function sheetUrl() { return (new URLSearchParams(location.search).get('sheet'))
 function history() { try { return JSON.parse(store.get('sq_hist', '[]')); } catch (e) { return []; } }
 function payloadOf(rep) {
   const C = rep.criteria;
-  return { token: sheetToken(), grade: DATA.meta.grade || '', timestamp: new Date().toISOString(), name: S.name, class: S.cls, topic: DATA.meta.title, level: rep.level, grammarVocab: C.gv.score, discourse: C.dm.score, pronunciation: C.pr.score == null ? '' : C.pr.score, interactive: C.ic.score, total20: rep.total20, score10: rep.score10, words: rep.words, seconds: rep.duration, wpm: rep.wpm == null ? '' : rep.wpm, clues: rep.covN + '/' + rep.coverage.length, transcript: (rep.typed ? $('#typedTxt').value : S.segs.map(s => s.text).join(' ')).slice(0, 1500), tips: rep.tips.map(t => t.vi).join(' | ').slice(0, 800), mode: rep.typed ? 'typed' : 'voice', unit: DATA.meta.unit || '', gameId: DATA.meta.id || '', cefr: rep.cefr && rep.cefr.enough ? rep.cefr.label : '' };
+  return { token: sheetToken(), grade: DATA.meta.grade || '', timestamp: new Date().toISOString(), name: S.name, class: S.cls, topic: DATA.meta.title, level: rep.level, grammarVocab: C.gv.score, discourse: C.dm.score, pronunciation: C.pr.score == null ? '' : C.pr.score, interactive: C.ic.score, total20: rep.total20, score10: rep.score10, words: rep.words, seconds: rep.duration, wpm: rep.wpm == null ? '' : rep.wpm, clues: rep.covN + '/' + rep.coverage.length, transcript: (rep.typed ? $('#typedTxt').value : S.segs.map(s => s.text).join(' ')).slice(0, 1500), tips: rep.tips.map(t => t.vi).join(' | ').slice(0, 800), mode: rep.typed ? 'typed' : (EXAM ? 'exam' : 'voice'), attempt: EXAM ? (S.attempt || 0) + 1 : '', unit: DATA.meta.unit || '', gameId: DATA.meta.id || '', cefr: rep.cefr && rep.cefr.enough ? rep.cefr.label : '' };
 }
 async function postRow(p) {
   const url = sheetUrl(); if (!url) return 'nosheet';
@@ -1653,9 +1709,11 @@ async function sendScore(rep, manual) {
   const p = payloadOf(rep), st = $('#sheetSt'), rb = $('#rvRetry');
   if (!manual) { const h = history(); h.push(p); store.set('sq_hist', JSON.stringify(h.slice(-200))); }
   if (st) { st.textContent = '⏳ Đang lưu điểm vào Google Sheet…'; st.style.color = 'var(--dim)'; }
-  const r = await postRow(p);
+  let toSend = p, audioMsg = '';
+  
+  const r = await postRow(toSend);
   if (!st) return;
-  if (r === 'ok') { st.textContent = '✅ Đã gửi điểm cho giáo viên (Google Sheet).'; st.style.color = '#6ee7b7'; rb.style.display = 'none'; }
+  if (r === 'ok') { st.textContent = (EXAM ? '✅ Đã nộp bài' : '✅ Đã gửi điểm') + audioMsg + ' cho giáo viên.'; st.style.color = '#6ee7b7'; rb.style.display = 'none'; }
   else if (r === 'nosheet') { st.textContent = 'ℹ️ Giáo viên chưa nối Google Sheet – điểm chỉ lưu trên máy này.'; st.style.color = 'var(--dim)'; rb.style.display = 'none'; }
   else { st.textContent = '⚠️ Chưa gửi được (mất mạng?). Bấm “Resend score”.'; st.style.color = '#fda4af'; rb.style.display = ''; }
 }
